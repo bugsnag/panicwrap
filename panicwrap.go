@@ -211,7 +211,7 @@ func wrap(c *WrapConfig) (int, error) {
 		}
 
 		exitStatus := 1
-		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.Exited() {
 			exitStatus = status.ExitStatus()
 		}
 
