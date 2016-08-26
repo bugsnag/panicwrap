@@ -3,7 +3,7 @@
 package panicwrap
 
 import (
-	"github.com/bugsnag/osext"
+	"github.com/kardianos/osext"
 	"os"
 	"os/exec"
 )
