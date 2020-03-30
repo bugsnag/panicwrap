@@ -1,5 +1,3 @@
-// +build darwin dragonfly freebsd linux,!arm64 netbsd openbsd
-
 package panicwrap
 
 import (
