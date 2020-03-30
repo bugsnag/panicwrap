@@ -1,3 +1,6 @@
+//+build linux,arm64
+
+
 package panicwrap
 
 import (
