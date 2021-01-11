@@ -12,7 +12,6 @@ package panicwrap
 import (
 	"bytes"
 	"errors"
-	"github.com/kardianos/osext"
 	"io"
 	"os"
 	"os/exec"
@@ -143,7 +142,7 @@ func wrap(c *WrapConfig) (int, error) {
 	}
 
 	// Get the path to our current executable
-	exePath, err := osext.Executable()
+	exePath, err := Executable()
 	if err != nil {
 		return -1, err
 	}
