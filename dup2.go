@@ -1,4 +1,4 @@
-// +build !arm64,!windows
+// +build !windows
 
 package panicwrap
 

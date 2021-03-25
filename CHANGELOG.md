@@ -1,3 +1,10 @@
+## TBD
+
+### Bug fixes
+
+* Add build support from arm64-based macOS by updating build settings for
+  `dup2()`
+
 ## 1.3.1 (2021-01-12)
 
 This release removes the dependency on [osext](https://github.com/kardianos/osext)
