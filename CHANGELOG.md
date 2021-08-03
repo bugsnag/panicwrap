@@ -1,3 +1,10 @@
+## TBD
+
+### Bug fixes
+
+* Fix build support for arm64-based macOS by updating build settings for
+  `dup2()`
+
 ## 1.3.3 (2021-07-13)
 
 ### Bug fixes
