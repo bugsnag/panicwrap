@@ -1,4 +1,4 @@
-//+build linux,arm64
+//+build linux,arm64 linux,loong64
 
 package panicwrap
 
