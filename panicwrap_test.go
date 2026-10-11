@@ -3,6 +3,7 @@ package panicwrap
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"runtime"
@@ -221,9 +222,9 @@ func TestHelperProcess(*testing.T) {
 	case "panic-monitor":
 
 		config := &WrapConfig{
-			Handler: panicHandler,
+			Handler:   panicHandler,
 			HidePanic: true,
-			Monitor: true,
+			Monitor:   true,
 		}
 
 		exitStatus, err := Wrap(config)
@@ -396,9 +397,6 @@ func TestPanicWrap_concurrentMapWrite(t *testing.T) {
 }
 
 func TestPanicWrap_panicBoundary(t *testing.T) {
-	// TODO(mitchellh): panics are currently lost on boundaries
-	t.SkipNow()
-
 	stdout := new(bytes.Buffer)
 
 	p := helperProcess("panic-boundary")
@@ -408,8 +406,45 @@ func TestPanicWrap_panicBoundary(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if !strings.Contains(stdout.String(), "wrapped: 1015") {
+	// The child writes "pan" and then "ic: oh crap".
+	if !strings.Contains(stdout.String(), "wrapped: 14") {
 		t.Fatalf("didn't wrap: %#v", stdout.String())
+	}
+}
+
+func TestTrackPanic_splitHeader(t *testing.T) {
+	r, w := io.Pipe()
+	out := new(bytes.Buffer)
+	ch := make(chan string)
+	go trackPanic(r, out, time.Second, ch)
+	go func() {
+		w.Write([]byte("before pan"))
+		w.Write([]byte("ic: split\n"))
+		w.Close()
+	}()
+	got := <-ch
+	if got != "panic: split\n" {
+		t.Fatalf("panic text: %q", got)
+	}
+	if out.String() != "before " {
+		t.Fatalf("forwarded: %q", out.String())
+	}
+}
+
+func TestTrackPanic_plainTextFlushed(t *testing.T) {
+	r, w := io.Pipe()
+	out := new(bytes.Buffer)
+	ch := make(chan string)
+	go trackPanic(r, out, time.Second, ch)
+	go func() {
+		w.Write([]byte("hello world, not a panic"))
+		w.Close()
+	}()
+	if got := <-ch; got != "" {
+		t.Fatalf("panic text: %q", got)
+	}
+	if out.String() != "hello world, not a panic" {
+		t.Fatalf("forwarded: %q", out.String())
 	}
 }
 

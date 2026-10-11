@@ -1,3 +1,9 @@
+## Unreleased
+
+### Bug fixes
+
+* Detect a panic header that is split across stderr reads
+
 ## 1.3.4 (2021-08-10)
 
 ### Bug fixes

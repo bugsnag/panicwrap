@@ -264,7 +264,17 @@ func trackPanic(r io.Reader, w io.Writer, dur time.Duration, result chan<- strin
 		[]byte("panic:"),
 		[]byte("fatal error:"),
 	}
+	// A header can start in one read and finish in the next. Hold back
+	// one byte less than the longest header so that tail can be joined
+	// with the following read before it is treated as ordinary output.
+	keep := 0
+	for _, header := range panicHeaders {
+		if len(header)-1 > keep {
+			keep = len(header) - 1
+		}
+	}
 	panicType := -1
+	var carry []byte
 
 	tempBuf := make([]byte, 2048)
 	for {
@@ -288,15 +298,29 @@ func trackPanic(r io.Reader, w io.Writer, dur time.Duration, result chan<- strin
 			var err error
 			buf = tempBuf
 			n, err = r.Read(buf)
-			if n <= 0 && err == io.EOF {
+			if n > 0 && panicTimer == nil && len(carry) > 0 {
+				merged := make([]byte, 0, len(carry)+n)
+				merged = append(merged, carry...)
+				merged = append(merged, buf[:n]...)
+				buf = merged
+				n = len(merged)
+				carry = nil
+			}
+			if n <= 0 && err != nil {
 				if panicBuf.Len() > 0 {
 					// We were tracking a panic, assume it was a panic
 					// and return that as the result.
 					result <- panicBuf.String()
+				} else if len(carry) > 0 {
+					w.Write(carry)
 				}
 
 				return
 			}
+		}
+
+		if n <= 0 {
+			continue
 		}
 
 		if panicTimer != nil {
@@ -333,13 +357,21 @@ func trackPanic(r io.Reader, w io.Writer, dur time.Duration, result chan<- strin
 			}
 		}
 
-		// Flush to stderr what isn't a panic
-		w.Write(buf[0:flushIdx])
-
 		if panicType == -1 {
-			// Not a panic so just continue along
+			// Not a panic. Hold back the tail so a header split across
+			// this read and the next one is still visible.
+			if n > keep {
+				w.Write(buf[0 : n-keep])
+				carry = append([]byte(nil), buf[n-keep:n]...)
+			} else {
+				carry = append([]byte(nil), buf[:n]...)
+			}
 			continue
 		}
+
+		// Flush to stderr what isn't a panic
+		w.Write(buf[0:flushIdx])
+		carry = nil
 
 		// We have a panic header. Write we assume is a panic os far.
 		panicBuf.Write(buf[flushIdx:n])
